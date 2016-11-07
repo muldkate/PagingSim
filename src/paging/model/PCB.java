@@ -1,9 +1,7 @@
 package paging.model;
 
 public class PCB {
-  // The constant for the text segment.
   public static final int TEXT_SEGMENT = 0;
-  // The constant for the data segment.
   public static final int DATA_SEGMENT = 1;
   // The process ID.
   private int pid;
@@ -27,8 +25,14 @@ public class PCB {
     numPagesTextSegment = calculateNumberPages(pTextSegmentSize);
     numPagesDataSegment = calculateNumberPages(pDataSegmentSize);
     pageTable = new int[2][];
-    pageTable[DATA_SEGMENT] = new int[numPagesTextSegment];
+    pageTable[TEXT_SEGMENT] = new int[numPagesTextSegment];
     pageTable[DATA_SEGMENT] = new int[numPagesDataSegment];
+    for(int i = 0; i<numPagesTextSegment; i++){
+      pageTable[TEXT_SEGMENT][i] = -1;
+    }
+    for(int i = 0; i<numPagesDataSegment; i++){
+      pageTable[DATA_SEGMENT][i] = -1;
+    }
   }
 
   // Calculate the number of pages needed to store a segment of the given size.
