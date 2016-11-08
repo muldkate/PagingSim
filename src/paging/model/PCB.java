@@ -1,5 +1,7 @@
 package paging.model;
 
+import java.awt.Color;
+
 public class PCB {
   public static final int TEXT_SEGMENT = 0;
   public static final int DATA_SEGMENT = 1;
