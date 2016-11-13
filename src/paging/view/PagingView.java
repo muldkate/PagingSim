@@ -29,12 +29,8 @@ public class PagingView extends JPanel {
   private static final String FILENAME = "input3a.data";
   // The size of the GUI
   private static final int GUI_SIZE = 800;
-  // The indexes of the labels in the process list and memory
+  // The indexes of the labels in memory
   private static final int PROCESS_NAME = 0;
-  private static final int TEXT_SEG_SIZE = 1;
-  private static final int TEXT_SEG_NUM_PAGES = 2;
-  private static final int DATA_SEG_SIZE = 3;
-  private static final int DATA_SEG_NUM_PAGES = 4;
   private static final int SEG_TYPE = 1;
   private static final int PAGE_NUM = 2;
   // The indexes for the memory panels
@@ -47,7 +43,7 @@ public class PagingView extends JPanel {
   JPanel[] memoryFramePanel;
   private JPanel[] frameContentsPanel;
   private JLabel[][] frameLabels;
-  private JPanel pcbContainerPanel;
+  private JPanel pcbListPanel;
   private JPanel[] pcbPanels;
   private JLabel[][] pcbLabels;
   private JButton nextEventButton;
@@ -62,6 +58,7 @@ public class PagingView extends JPanel {
   private Queue<Color> freeProcessColors;
   // The color to display free frames as
   private Color freeFrameColor;
+  private JPanel pcbContainerPanel;
 
   // The constructor for the GUI
   public PagingView() {
@@ -93,11 +90,11 @@ public class PagingView extends JPanel {
       frameContentsPanel[i]
           .setBorder(BorderFactory.createEtchedBorder(EtchedBorder.RAISED));
       frameLabels[i] = new JLabel[3];
-      frameLabels[i][PROCESS_NAME] = new JLabel("Process ");
+      frameLabels[i][PROCESS_NAME] = new JLabel();
       frameLabels[i][PROCESS_NAME].setHorizontalAlignment(JLabel.LEFT);
-      frameLabels[i][SEG_TYPE] = new JLabel("Segment Type: ");
+      frameLabels[i][SEG_TYPE] = new JLabel();
       frameLabels[i][SEG_TYPE].setHorizontalAlignment(JLabel.LEFT);
-      frameLabels[i][PAGE_NUM] = new JLabel("Page Number: ");
+      frameLabels[i][PAGE_NUM] = new JLabel();
       frameLabels[i][PAGE_NUM].setHorizontalAlignment(JLabel.LEFT);
 
       frameContentsPanel[i].add(frameLabels[i][PROCESS_NAME]);
@@ -111,13 +108,19 @@ public class PagingView extends JPanel {
         BorderLayout.CENTER);
 
     // Create the panel that displays the processes
-    pcbContainerPanel =
-        new JPanel(new GridLayout(PagingModel.MAX_NUMBER_PROCESSES + 1, 1, 5, 5));
-    pcbContainerPanel
+    pcbContainerPanel = new JPanel(new BorderLayout());
+    JPanel temp = new JPanel();
+    temp.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+    temp.add(new JLabel("Current Processes"));
+    pcbContainerPanel.add(temp, BorderLayout.NORTH);
+    
+    pcbListPanel = new JPanel(
+        new GridLayout(PagingModel.MAX_NUMBER_PROCESSES, 1, 5, 5));
+    pcbListPanel
         .setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-    pcbContainerPanel.add(new JLabel("Current Procceses"));
     pcbPanels = new JPanel[PagingModel.MAX_NUMBER_PROCESSES];
     pcbLabels = new JLabel[PagingModel.MAX_NUMBER_PROCESSES][];
+    pcbContainerPanel.add(pcbListPanel, BorderLayout.CENTER);
     pcbScrollPane = new JScrollPane(pcbContainerPanel,
         JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
         JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -156,6 +159,8 @@ public class PagingView extends JPanel {
     if ("ERROR".equals(model.getLastProcessedEvent())) {
       eventPanelLabel.setText("There was a problem opening the file.");
       nextEventButton.setEnabled(false);
+    } else {
+      eventPanelLabel.setText("Click the Next Event Button to start the simulation.");
     }
 
     // Create the list of free colors
@@ -188,41 +193,73 @@ public class PagingView extends JPanel {
     // Zero out the processes displayed
     for (int i = 0; i < pcbPanels.length; i++) {
       if (pcbPanels[i] != null) {
-        pcbContainerPanel.remove(pcbPanels[i]);
+        pcbListPanel.remove(pcbPanels[i]);
         pcbPanels[i] = null;
       }
     }
-
+    
     // Set the labels for the current processes
     int index = 0;
     for (int x : model.getPidSet()) {
       PCB temp = model.getPCB(x);
-      pcbPanels[index] = new JPanel(new GridLayout(5, 1));
+      int numLabels = 7;
+      if (temp.getNumPagesTextSegment() > 0) {
+        numLabels += temp.getNumPagesTextSegment();
+      }
+      if (temp.getNumPagesDataSegment() > 0) {
+        numLabels += temp.getNumPagesDataSegment();
+      }
+      pcbPanels[index] = new JPanel(new GridLayout(numLabels, 1));
       pcbPanels[index]
           .setBorder(BorderFactory.createEtchedBorder(EtchedBorder.RAISED));
-      pcbLabels[index] = new JLabel[5];
       pcbPanels[index]
           .setBackground((Color) processColorsMapping.get(temp.getPid()));
-      for (int i = 0; i < 5; i++) {
+      pcbLabels[index] = new JLabel[numLabels];
+      for (int i = 0; i < numLabels; i++) {
         pcbLabels[index][i] = new JLabel("");
         pcbLabels[index][i].setHorizontalAlignment(JLabel.LEFT);
         pcbPanels[index].add(pcbLabels[index][i]);
       }
-      pcbLabels[index][PROCESS_NAME].setText("Process: " + x);
-      pcbLabels[index][TEXT_SEG_SIZE].setText(
-          "Text Segment Size: " + temp.getTextSegmentSize() + " bytes");
-      pcbLabels[index][TEXT_SEG_NUM_PAGES].setText(
-          "Text Segment Number of Pages: " + temp.getNumPagesTextSegment());
-      pcbLabels[index][DATA_SEG_SIZE]
-          .setText("Data Segment Size: " + temp.getDataSegmentSize());
-      pcbLabels[index][DATA_SEG_NUM_PAGES].setText(
-          "Data Segment Number of Pages: " + temp.getNumPagesDataSegment());
-      pcbContainerPanel.add(pcbPanels[index]);
+      int currLabel = 0;
+      pcbLabels[index][currLabel].setText(" Process " + x);
+      currLabel++;
+      pcbLabels[index][currLabel].setText(
+          " Text Segment");
+      currLabel++;
+      pcbLabels[index][currLabel].setText(
+          "   Size: " + temp.getTextSegmentSize() + " bytes");
+      currLabel++;
+      pcbLabels[index][currLabel].setText(
+          "   Pages: " + temp.getNumPagesTextSegment());
+      currLabel++;
+      if (temp.getNumPagesTextSegment() > 0) {
+        for (int i = 0; i < temp.getNumPagesTextSegment(); i++) {
+          pcbLabels[index][currLabel].setText("   Page " + i + "  =>  Frame "
+              + temp.getPageTableMapping(PCB.TEXT_SEGMENT, i));
+          currLabel++;
+        }
+      }
+      pcbLabels[index][currLabel].setText(
+          " Data Segment");
+      currLabel++;
+      pcbLabels[index][currLabel]
+          .setText("   Size: " + temp.getDataSegmentSize() + " bytes");
+      currLabel++;
+      pcbLabels[index][currLabel].setText(
+          "   Pages: " + temp.getNumPagesDataSegment());
+      currLabel++;
+      if (temp.getNumPagesDataSegment() > 0) {
+        for (int i = 0; i < temp.getNumPagesDataSegment(); i++) {
+          pcbLabels[index][currLabel].setText("   Page " + i + "  =>  Frame "
+              + temp.getPageTableMapping(PCB.DATA_SEGMENT, i));
+          currLabel++;
+        }
+      }
+      pcbListPanel.add(pcbPanels[index]);
       index++;
     }
-
     // Repaint the panel
-    pcbContainerPanel.repaint();
+    pcbListPanel.repaint();
 
     // Create a boolean array to track free frames
     boolean freeFrames[] = new boolean[PagingModel.NUMBER_FRAMES];
@@ -265,6 +302,7 @@ public class PagingView extends JPanel {
         freeFrames[frame] = false;
       }
     }
+    
     // Set the contents of the free frames
     for (int i = 0; i < PagingModel.NUMBER_FRAMES; i++) {
       if (freeFrames[i]) {
