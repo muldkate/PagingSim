@@ -25,6 +25,8 @@ import paging.model.PagingModel;
 // This class creates the GUI to display the paging simulation
 public class PagingView extends JPanel {
   private static final long serialVersionUID = 1L;
+  // The file to open
+  private static final String FILENAME = "input3a.data";
   // The size of the GUI
   private static final int GUI_SIZE = 800;
   // The indexes of the labels in the process list and memory
@@ -51,7 +53,7 @@ public class PagingView extends JPanel {
   private JButton nextEventButton;
   private JLabel eventPanelLabel;
   private JScrollPane pcbScrollPane;
-  
+
   // The paging model instance to display
   PagingModel model;
   // The mapping of process id to display color
@@ -110,25 +112,12 @@ public class PagingView extends JPanel {
 
     // Create the panel that displays the processes
     pcbContainerPanel =
-        new JPanel(new GridLayout(PagingModel.MAX_NUMBER_PROCESSES + 1, 1));
+        new JPanel(new GridLayout(PagingModel.MAX_NUMBER_PROCESSES + 1, 1, 5, 5));
     pcbContainerPanel
         .setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-    pcbContainerPanel.setPreferredSize(new Dimension(200, 1000));
     pcbContainerPanel.add(new JLabel("Current Procceses"));
     pcbPanels = new JPanel[PagingModel.MAX_NUMBER_PROCESSES];
     pcbLabels = new JLabel[PagingModel.MAX_NUMBER_PROCESSES][];
-    for (int i = 0; i < PagingModel.MAX_NUMBER_PROCESSES; i++) {
-      pcbPanels[i] = new JPanel(new GridLayout(5, 1));
-      pcbPanels[i]
-          .setBorder(BorderFactory.createEtchedBorder(EtchedBorder.RAISED));
-      pcbLabels[i] = new JLabel[5];
-      for (int x = 0; x < 5; x++) {
-        pcbLabels[i][x] = new JLabel("Blank");
-        pcbLabels[i][x].setHorizontalAlignment(JLabel.LEFT);
-        pcbPanels[i].add(pcbLabels[i][x]);
-      }
-      pcbContainerPanel.add(pcbPanels[i]);
-    }
     pcbScrollPane = new JScrollPane(pcbContainerPanel,
         JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
         JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -162,9 +151,9 @@ public class PagingView extends JPanel {
     gui.setVisible(true);
 
     // Create the paging model
-    model = new PagingModel("input3a.data");
-    
-    if("ERROR".equals(model.getLastProcessedEvent())){
+    model = new PagingModel(FILENAME);
+
+    if ("ERROR".equals(model.getLastProcessedEvent())) {
       eventPanelLabel.setText("There was a problem opening the file.");
       nextEventButton.setEnabled(false);
     }
@@ -198,15 +187,27 @@ public class PagingView extends JPanel {
   public final void display() {
     // Zero out the processes displayed
     for (int i = 0; i < pcbPanels.length; i++) {
-      pcbPanels[i].setVisible(false);
+      if (pcbPanels[i] != null) {
+        pcbContainerPanel.remove(pcbPanels[i]);
+        pcbPanels[i] = null;
+      }
     }
+
     // Set the labels for the current processes
     int index = 0;
     for (int x : model.getPidSet()) {
       PCB temp = model.getPCB(x);
-      pcbPanels[index].setVisible(true);
+      pcbPanels[index] = new JPanel(new GridLayout(5, 1));
+      pcbPanels[index]
+          .setBorder(BorderFactory.createEtchedBorder(EtchedBorder.RAISED));
+      pcbLabels[index] = new JLabel[5];
       pcbPanels[index]
           .setBackground((Color) processColorsMapping.get(temp.getPid()));
+      for (int i = 0; i < 5; i++) {
+        pcbLabels[index][i] = new JLabel("");
+        pcbLabels[index][i].setHorizontalAlignment(JLabel.LEFT);
+        pcbPanels[index].add(pcbLabels[index][i]);
+      }
       pcbLabels[index][PROCESS_NAME].setText("Process: " + x);
       pcbLabels[index][TEXT_SEG_SIZE].setText(
           "Text Segment Size: " + temp.getTextSegmentSize() + " bytes");
@@ -216,16 +217,20 @@ public class PagingView extends JPanel {
           .setText("Data Segment Size: " + temp.getDataSegmentSize());
       pcbLabels[index][DATA_SEG_NUM_PAGES].setText(
           "Data Segment Number of Pages: " + temp.getNumPagesDataSegment());
+      pcbContainerPanel.add(pcbPanels[index]);
       index++;
     }
+
+    // Repaint the panel
+    pcbContainerPanel.repaint();
 
     // Create a boolean array to track free frames
     boolean freeFrames[] = new boolean[PagingModel.NUMBER_FRAMES];
     for (int i = 0; i < PagingModel.NUMBER_FRAMES; i++) {
       freeFrames[i] = true;
     }
-    
-    // Set the labels and colors for the frames with pages in them 
+
+    // Set the labels and colors for the frames with pages in them
     for (int x : model.getPidSet()) {
       PCB temp = model.getPCB(x);
       // Set the text segment frames
