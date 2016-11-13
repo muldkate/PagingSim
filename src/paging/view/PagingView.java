@@ -111,7 +111,7 @@ public class PagingView extends JPanel {
     pcbContainerPanel = new JPanel(new BorderLayout());
     JPanel temp = new JPanel();
     temp.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
-    temp.add(new JLabel("Current Processes"));
+    temp.add(new JLabel("Current Page Tables"));
     pcbContainerPanel.add(temp, BorderLayout.NORTH);
     
     pcbListPanel = new JPanel(
@@ -202,14 +202,14 @@ public class PagingView extends JPanel {
     int index = 0;
     for (int x : model.getPidSet()) {
       PCB temp = model.getPCB(x);
-      int numLabels = 7;
+      int numLabels = 3;
       if (temp.getNumPagesTextSegment() > 0) {
         numLabels += temp.getNumPagesTextSegment();
       }
       if (temp.getNumPagesDataSegment() > 0) {
         numLabels += temp.getNumPagesDataSegment();
       }
-      pcbPanels[index] = new JPanel(new GridLayout(numLabels, 1));
+      pcbPanels[index] = new JPanel(new GridLayout(PagingModel.NUMBER_FRAMES+3, 1));
       pcbPanels[index]
           .setBorder(BorderFactory.createEtchedBorder(EtchedBorder.RAISED));
       pcbPanels[index]
@@ -221,36 +221,24 @@ public class PagingView extends JPanel {
         pcbPanels[index].add(pcbLabels[index][i]);
       }
       int currLabel = 0;
-      pcbLabels[index][currLabel].setText(" Process " + x);
+      pcbLabels[index][currLabel].setText(" Process " + x + " Page Table");
       currLabel++;
       pcbLabels[index][currLabel].setText(
-          " Text Segment");
-      currLabel++;
-      pcbLabels[index][currLabel].setText(
-          "   Size: " + temp.getTextSegmentSize() + " bytes");
-      currLabel++;
-      pcbLabels[index][currLabel].setText(
-          "   Pages: " + temp.getNumPagesTextSegment());
+          "   Text Segment");
       currLabel++;
       if (temp.getNumPagesTextSegment() > 0) {
         for (int i = 0; i < temp.getNumPagesTextSegment(); i++) {
-          pcbLabels[index][currLabel].setText("   Page " + i + "  =>  Frame "
+          pcbLabels[index][currLabel].setText("       Page " + i + "  =>  Frame "
               + temp.getPageTableMapping(PCB.TEXT_SEGMENT, i));
           currLabel++;
         }
       }
       pcbLabels[index][currLabel].setText(
-          " Data Segment");
-      currLabel++;
-      pcbLabels[index][currLabel]
-          .setText("   Size: " + temp.getDataSegmentSize() + " bytes");
-      currLabel++;
-      pcbLabels[index][currLabel].setText(
-          "   Pages: " + temp.getNumPagesDataSegment());
+          "   Data Segment");
       currLabel++;
       if (temp.getNumPagesDataSegment() > 0) {
         for (int i = 0; i < temp.getNumPagesDataSegment(); i++) {
-          pcbLabels[index][currLabel].setText("   Page " + i + "  =>  Frame "
+          pcbLabels[index][currLabel].setText("       Page " + i + "  =>  Frame "
               + temp.getPageTableMapping(PCB.DATA_SEGMENT, i));
           currLabel++;
         }
