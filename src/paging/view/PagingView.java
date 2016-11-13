@@ -20,19 +20,25 @@ import javax.swing.JScrollPane;
 import javax.swing.border.EtchedBorder;
 
 import paging.model.PCB;
-import paging.model.Frame;
 import paging.model.PagingModel;
 
+// This class creates the GUI to display the paging simulation
 public class PagingView extends JPanel {
   private static final long serialVersionUID = 1L;
+  // The size of the GUI
   private static final int GUI_SIZE = 800;
+  // The indexes of the labels in the process list and memory
   private static final int PROCESS_NAME = 0;
   private static final int TEXT_SEG_SIZE = 1;
   private static final int TEXT_SEG_NUM_PAGES = 2;
   private static final int DATA_SEG_SIZE = 3;
   private static final int DATA_SEG_NUM_PAGES = 4;
+  private static final int SEG_TYPE = 1;
+  private static final int PAGE_NUM = 2;
+  // The indexes for the memory panels
   private static final int LABEL_PANEL = 0;
   private static final int FRAME_PANEL = 1;
+  // The components to create the GUI
   private JFrame gui;
   private JPanel eventPanel, containerPanel, nextActionPanel;
   private JPanel memoryContainerPanel;
@@ -40,17 +46,22 @@ public class PagingView extends JPanel {
   private JPanel[] frameContentsPanel;
   private JLabel[][] frameLabels;
   private JPanel pcbContainerPanel;
-  private JScrollPane pcbScrollPane;
   private JPanel[] pcbPanels;
   private JLabel[][] pcbLabels;
   private JButton nextEventButton;
   private JLabel eventPanelLabel;
-
+  private JScrollPane pcbScrollPane;
+  
+  // The paging model instance to display
   PagingModel model;
+  // The mapping of process id to display color
   private Map<Integer, Color> processColorsMapping;
+  // The queue of colors not mapped to a process
   private Queue<Color> freeProcessColors;
+  // The color to display free frames as
   private Color freeFrameColor;
 
+  // The constructor for the GUI
   public PagingView() {
     // Create the panel to display the current event
     eventPanel = new JPanel();
@@ -80,16 +91,16 @@ public class PagingView extends JPanel {
       frameContentsPanel[i]
           .setBorder(BorderFactory.createEtchedBorder(EtchedBorder.RAISED));
       frameLabels[i] = new JLabel[3];
-      frameLabels[i][0] = new JLabel("Process ");
-      frameLabels[i][0].setHorizontalAlignment(JLabel.LEFT);
-      frameLabels[i][1] = new JLabel("Segment Type: ");
-      frameLabels[i][1].setHorizontalAlignment(JLabel.LEFT);
-      frameLabels[i][2] = new JLabel("Page Number: ");
-      frameLabels[i][2].setHorizontalAlignment(JLabel.LEFT);
+      frameLabels[i][PROCESS_NAME] = new JLabel("Process ");
+      frameLabels[i][PROCESS_NAME].setHorizontalAlignment(JLabel.LEFT);
+      frameLabels[i][SEG_TYPE] = new JLabel("Segment Type: ");
+      frameLabels[i][SEG_TYPE].setHorizontalAlignment(JLabel.LEFT);
+      frameLabels[i][PAGE_NUM] = new JLabel("Page Number: ");
+      frameLabels[i][PAGE_NUM].setHorizontalAlignment(JLabel.LEFT);
 
-      frameContentsPanel[i].add(frameLabels[i][0]);
-      frameContentsPanel[i].add(frameLabels[i][1]);
-      frameContentsPanel[i].add(frameLabels[i][2]);
+      frameContentsPanel[i].add(frameLabels[i][PROCESS_NAME]);
+      frameContentsPanel[i].add(frameLabels[i][SEG_TYPE]);
+      frameContentsPanel[i].add(frameLabels[i][PAGE_NUM]);
       memoryFramePanel[FRAME_PANEL].add(frameContentsPanel[i]);
     }
 
@@ -127,14 +138,13 @@ public class PagingView extends JPanel {
     nextEventButton = new JButton();
     nextEventButton.setOpaque(true);
     nextEventButton.setText("Next Event");
-    // nextEventButton.addActionListener(buttonListener);
     nextEventButton.addActionListener((ActionListener) EventHandler
         .create(ActionListener.class, this, "processNextEvent"));
     nextActionPanel = new JPanel();
     nextActionPanel.add(nextEventButton);
     memoryContainerPanel.add(nextActionPanel, BorderLayout.SOUTH);
 
-    // Create the layout panel
+    // Create the container panel
     containerPanel = new JPanel(new BorderLayout(30, 30));
     containerPanel.add(eventPanel, BorderLayout.NORTH);
     containerPanel.add(memoryContainerPanel, BorderLayout.CENTER);
@@ -153,8 +163,13 @@ public class PagingView extends JPanel {
 
     // Create the paging model
     model = new PagingModel("input3a.data");
+    
+    if("ERROR".equals(model.getLastProcessedEvent())){
+      eventPanelLabel.setText("There was a problem opening the file.");
+      nextEventButton.setEnabled(false);
+    }
 
-    // Create the color mapping
+    // Create the list of free colors
     freeProcessColors = new LinkedList<Color>();
 
     // Ten possible process colors
@@ -169,8 +184,10 @@ public class PagingView extends JPanel {
     freeProcessColors.add(new Color(0, 255, 149)); // Light teal
     freeProcessColors.add(Color.WHITE);
 
+    // Create the mapping for processes to colors
     processColorsMapping = new HashMap<Integer, Color>();
 
+    // Set the color used for a free frame
     freeFrameColor = new Color(89, 255, 86);
     display();
   }
@@ -183,6 +200,7 @@ public class PagingView extends JPanel {
     for (int i = 0; i < pcbPanels.length; i++) {
       pcbPanels[i].setVisible(false);
     }
+    // Set the labels for the current processes
     int index = 0;
     for (int x : model.getPidSet()) {
       PCB temp = model.getPCB(x);
@@ -201,44 +219,78 @@ public class PagingView extends JPanel {
       index++;
     }
 
-    // Zero out the memory frames
+    // Create a boolean array to track free frames
+    boolean freeFrames[] = new boolean[PagingModel.NUMBER_FRAMES];
     for (int i = 0; i < PagingModel.NUMBER_FRAMES; i++) {
-      if (model.getFrame(i).isFree()) {
+      freeFrames[i] = true;
+    }
+    
+    // Set the labels and colors for the frames with pages in them 
+    for (int x : model.getPidSet()) {
+      PCB temp = model.getPCB(x);
+      // Set the text segment frames
+      for (int i = 0; i < temp.getNumPagesTextSegment(); i++) {
+        int frame = temp.getPageTableMapping(PCB.TEXT_SEGMENT, i);
+        // Set the background color for the frame
+        frameContentsPanel[frame]
+            .setBackground(processColorsMapping.get(temp.getPid()));
+        // Set the process number
+        frameLabels[frame][0].setText(" Process " + temp.getPid());
+        // Set the segment type
+        frameLabels[frame][1].setText(" Segment Type: Text");
+        // Set the page number
+        frameLabels[frame][2].setText(" Page Number: " + i);
+        // Mark the frame as taken
+        freeFrames[frame] = false;
+      }
+
+      // Set the data segment frames
+      for (int i = 0; i < temp.getNumPagesDataSegment(); i++) {
+        int frame = temp.getPageTableMapping(PCB.DATA_SEGMENT, i);
+        // Set the background color for the frame
+        frameContentsPanel[frame]
+            .setBackground(processColorsMapping.get(temp.getPid()));
+        // Set the process number
+        frameLabels[frame][0].setText(" Process " + temp.getPid());
+        // Set the segment type
+        frameLabels[frame][1].setText(" Segment Type: Data");
+        // Set the page number
+        frameLabels[frame][2].setText(" Page Number: " + i);
+        // Mark the frame as taken
+        freeFrames[frame] = false;
+      }
+    }
+    // Set the contents of the free frames
+    for (int i = 0; i < PagingModel.NUMBER_FRAMES; i++) {
+      if (freeFrames[i]) {
         frameContentsPanel[i].setBackground(freeFrameColor);
         frameLabels[i][0].setText(" Free Frame");
         frameLabels[i][1].setText("");
         frameLabels[i][2].setText("");
-      } else {
-        Frame temp = model.getFrame(i);
-        frameContentsPanel[i]
-            .setBackground(processColorsMapping.get(temp.getPid()));
-        frameLabels[i][0].setText(" Process " + temp.getPid());
-        if (temp.getSegmentType() == Frame.TEXT_SEGMENT) {
-          frameLabels[i][1].setText(" Segment Type: Text");
-        } else {
-          frameLabels[i][1].setText(" Segment Type: Data");
-        }
-        frameLabels[i][2].setText(" Page Number: " + temp.getPageNumber());
       }
     }
   }
 
+  // Method processes the next event and sets the message displayed to the user.
   public void processNextEvent() {
+    // Check if there are more events in the file
     if (model.hasNextLine() == true) {
       String event = model.processNextLine();
+      // Set the message displayed to the user
       String[] splitLine = event.split(" ");
       int pid = Integer.parseInt(splitLine[0]);
       if ("Halt".equals(splitLine[1])) {
         freeProcessColors.add((Color) processColorsMapping.remove(pid));
         eventPanelLabel.setText("Process " + pid
-            + " has finished executing and has been removed from memory");
+            + " has finished executing and has been removed from memory.");
       } else {
         processColorsMapping.put(pid, freeProcessColors.remove());
         eventPanelLabel.setText("Created Process " + pid + ".");
       }
+      // Update the display
       display();
     } else {
-      eventPanelLabel.setText("There are no more events to process.");
+      eventPanelLabel.setText("There are no more events to display.");
       nextEventButton.setEnabled(false);
     }
   }

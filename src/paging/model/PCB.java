@@ -1,9 +1,10 @@
 package paging.model;
 
-import java.awt.Color;
-
+// This class represents a process control block
 public class PCB {
+  // The index of the text segment
   public static final int TEXT_SEGMENT = 0;
+  // The index of the data segment
   public static final int DATA_SEGMENT = 1;
   // The process ID.
   private int pid;
@@ -29,67 +30,55 @@ public class PCB {
     pageTable = new int[2][];
     pageTable[TEXT_SEGMENT] = new int[numPagesTextSegment];
     pageTable[DATA_SEGMENT] = new int[numPagesDataSegment];
-    for(int i = 0; i<numPagesTextSegment; i++){
+    // Initialize the mappings to -1
+    for (int i = 0; i < numPagesTextSegment; i++) {
       pageTable[TEXT_SEGMENT][i] = -1;
     }
-    for(int i = 0; i<numPagesDataSegment; i++){
+    for (int i = 0; i < numPagesDataSegment; i++) {
       pageTable[DATA_SEGMENT][i] = -1;
     }
   }
 
   // Calculate the number of pages needed to store a segment of the given size.
   private int calculateNumberPages(int size) {
+    // If the size does not evenly divide by the frame size, add another page to
+    // hold the extra bytes
     return (size / PagingModel.FRAME_SIZE
         + ((size % PagingModel.FRAME_SIZE == 0) ? 0 : 1));
   }
 
-  // A Setter for the page table mapping
+  // A setter for a page table mapping
   public void setPageTableMapping(int segment, int page, int frameMapping) {
     pageTable[segment][page] = frameMapping;
   }
 
-  // A Setter for the page table mapping
+  // A getter for a page table mapping
   public int getPageTableMapping(int segment, int page) {
     return pageTable[segment][page];
   }
 
+  // A getter for the pid
   public int getPid() {
     return pid;
   }
 
-  public void setPid(int pid) {
-    this.pid = pid;
-  }
-
+  // A getter for the text segment size
   public int getTextSegmentSize() {
     return textSegmentSize;
   }
 
-  public void setTextSegmentSize(int textSegmentSize) {
-    this.textSegmentSize = textSegmentSize;
-  }
-
+  // A getter for the data segment size
   public int getDataSegmentSize() {
     return dataSegmentSize;
   }
 
-  public void setDataSegmentSize(int dataSegmentSize) {
-    this.dataSegmentSize = dataSegmentSize;
-  }
-
+  // A getter for the number of pages in the text segment
   public int getNumPagesTextSegment() {
     return numPagesTextSegment;
   }
 
-  public void setNumPagesTextSegment(int numPagesTextSegment) {
-    this.numPagesTextSegment = numPagesTextSegment;
-  }
-
+  // A getter for the pages in the data segment
   public int getNumPagesDataSegment() {
     return numPagesDataSegment;
-  }
-
-  public void setNumPagesDataSegment(int numPagesDataSegment) {
-    this.numPagesDataSegment = numPagesDataSegment;
   }
 }
