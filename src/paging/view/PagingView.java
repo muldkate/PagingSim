@@ -26,7 +26,7 @@ import paging.model.PagingModel;
 public class PagingView extends JPanel {
   private static final long serialVersionUID = 1L;
   // The file to open
-  private static final String FILENAME = "input3a.data";
+  private static final String FILENAME = "input3b.data";
   // The size of the GUI
   private static final int GUI_SIZE = 800;
   // The indexes of the labels in memory
