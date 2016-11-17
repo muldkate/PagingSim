@@ -18,14 +18,14 @@ public class PagingModel {
   // Assumption: the maximum number of processes in memory at a time is 10.
   public static final int MAX_NUMBER_PROCESSES = 10;
   // The last string read from the file and processed
-  String lastProcessedEvent;
-  Scanner scanner;
+  private String lastProcessedEvent;
+  private Scanner scanner;
   // The file holding the events
-  File eventFile;
+  private File eventFile;
   // The queue holds a list of the free slots in memory
-  Queue<Integer> freeMemory;
+  private Queue<Integer> freeMemory;
   // The map of process id's to the process's control block
-  Map<Integer, PCB> processes;
+  private Map<Integer, PCB> processes;
 
   // A constructor for a paging model
   // filename: the name of the file containing the events to process
@@ -34,7 +34,7 @@ public class PagingModel {
     processes = new HashMap<Integer, PCB>();
 
     // Initialize memory as having all free frames
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < NUMBER_FRAMES; i++) {
       freeMemory.add(i);
     }
 
@@ -78,7 +78,7 @@ public class PagingModel {
     System.out.println("Initializing: " + pid + " tss: " + textSegmentSize
         + " dss: " + dataSegmentSize);
     PCB tempPCB = new PCB(pid, textSegmentSize, dataSegmentSize);
-    
+
     // Place the PCB in the processes map
     processes.put(pid, tempPCB);
 

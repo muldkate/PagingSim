@@ -15,6 +15,7 @@ import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.border.EtchedBorder;
@@ -24,9 +25,12 @@ import paging.model.PagingModel;
 
 // This class creates the GUI to display the paging simulation
 public class PagingView extends JPanel {
+  // The list of possible files to load
+  private final String[] fileChoices =
+      { "input3a.data", "input3b.data", "input3c.data" };
+  // The options to display in the JOptionPane
+  private String[] choices;
   private static final long serialVersionUID = 1L;
-  // The file to open
-  private static final String FILENAME = "input3b.data";
   // The size of the GUI
   private static final int GUI_SIZE = 800;
   // The indexes of the labels in memory
@@ -36,11 +40,16 @@ public class PagingView extends JPanel {
   // The indexes for the memory panels
   private static final int LABEL_PANEL = 0;
   private static final int FRAME_PANEL = 1;
+  private static final int FILE_NUMBER = 11;
+  private static final int PAGING_TABLE_START_NUMBER_LABELS = 3;
+  private static final int FRAMES_NUMBER_LABELS = 3;
+  private static final int SCROLL_PANE_X_DIM = 300;
+  private static final int SCROLL_PANE_Y_DIM = 900;
   // The components to create the GUI
   private JFrame gui;
   private JPanel eventPanel, containerPanel, nextActionPanel;
   private JPanel memoryContainerPanel;
-  JPanel[] memoryFramePanel;
+  private JPanel[] memoryFramePanel;
   private JPanel[] frameContentsPanel;
   private JLabel[][] frameLabels;
   private JPanel pcbListPanel;
@@ -49,23 +58,31 @@ public class PagingView extends JPanel {
   private JButton nextEventButton;
   private JLabel eventPanelLabel;
   private JScrollPane pcbScrollPane;
+  private JPanel pcbContainerPanel;
+  private JButton fileListButton;
 
   // The paging model instance to display
-  PagingModel model;
+  private PagingModel model;
   // The mapping of process id to display color
   private Map<Integer, Color> processColorsMapping;
   // The queue of colors not mapped to a process
   private Queue<Color> freeProcessColors;
   // The color to display free frames as
   private Color freeFrameColor;
-  private JPanel pcbContainerPanel;
 
   // The constructor for the GUI
   public PagingView() {
     // Create the panel to display the current event
-    eventPanel = new JPanel();
+    eventPanel = new JPanel(new BorderLayout());
     eventPanelLabel = new JLabel();
-    eventPanel.add(eventPanelLabel);
+    eventPanelLabel.setHorizontalAlignment(JLabel.CENTER);
+    fileListButton = new JButton();
+    fileListButton.setOpaque(true);
+    fileListButton.setText("Choose a Simulation");
+    fileListButton.addActionListener((ActionListener) EventHandler
+        .create(ActionListener.class, this, "setAFile"));
+    eventPanel.add(fileListButton, BorderLayout.WEST);
+    eventPanel.add(eventPanelLabel, BorderLayout.CENTER);
 
     // Create the panel to display the current state of memory
     memoryContainerPanel = new JPanel(new BorderLayout(40, 10));
@@ -86,10 +103,11 @@ public class PagingView extends JPanel {
       temp.add(new JLabel("Frame " + i + ":"));
       memoryFramePanel[LABEL_PANEL].add(temp);
 
-      frameContentsPanel[i] = new JPanel(new GridLayout(3, 1));
+      frameContentsPanel[i] =
+          new JPanel(new GridLayout(FRAMES_NUMBER_LABELS, 1));
       frameContentsPanel[i]
           .setBorder(BorderFactory.createEtchedBorder(EtchedBorder.RAISED));
-      frameLabels[i] = new JLabel[3];
+      frameLabels[i] = new JLabel[FRAMES_NUMBER_LABELS];
       frameLabels[i][PROCESS_NAME] = new JLabel();
       frameLabels[i][PROCESS_NAME].setHorizontalAlignment(JLabel.LEFT);
       frameLabels[i][SEG_TYPE] = new JLabel();
@@ -110,21 +128,21 @@ public class PagingView extends JPanel {
     // Create the panel that displays the processes
     pcbContainerPanel = new JPanel(new BorderLayout());
     JPanel temp = new JPanel();
-    temp.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+    temp.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
     temp.add(new JLabel("Current Page Tables"));
     pcbContainerPanel.add(temp, BorderLayout.NORTH);
-    
-    pcbListPanel = new JPanel(
-        new GridLayout(PagingModel.MAX_NUMBER_PROCESSES, 1, 5, 5));
-    pcbListPanel
-        .setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+    pcbListPanel =
+        new JPanel(new GridLayout(PagingModel.MAX_NUMBER_PROCESSES, 1, 5, 5));
+    pcbListPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
     pcbPanels = new JPanel[PagingModel.MAX_NUMBER_PROCESSES];
     pcbLabels = new JLabel[PagingModel.MAX_NUMBER_PROCESSES][];
     pcbContainerPanel.add(pcbListPanel, BorderLayout.CENTER);
     pcbScrollPane = new JScrollPane(pcbContainerPanel,
         JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
         JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-    pcbScrollPane.setPreferredSize(new Dimension(300, 900));
+    pcbScrollPane
+        .setPreferredSize(new Dimension(SCROLL_PANE_X_DIM, SCROLL_PANE_Y_DIM));
 
     // Create the panel that holds the next button
     nextEventButton = new JButton();
@@ -153,16 +171,6 @@ public class PagingView extends JPanel {
     gui.setResizable(false);
     gui.setVisible(true);
 
-    // Create the paging model
-    model = new PagingModel(FILENAME);
-
-    if ("ERROR".equals(model.getLastProcessedEvent())) {
-      eventPanelLabel.setText("There was a problem opening the file.");
-      nextEventButton.setEnabled(false);
-    } else {
-      eventPanelLabel.setText("Click the Next Event Button to start the simulation.");
-    }
-
     // Create the list of free colors
     freeProcessColors = new LinkedList<Color>();
 
@@ -183,7 +191,7 @@ public class PagingView extends JPanel {
 
     // Set the color used for a free frame
     freeFrameColor = new Color(89, 255, 86);
-    display();
+    setAFile();
   }
 
   /**
@@ -197,19 +205,20 @@ public class PagingView extends JPanel {
         pcbPanels[i] = null;
       }
     }
-    
+
     // Set the labels for the current processes
     int index = 0;
     for (int x : model.getPidSet()) {
       PCB temp = model.getPCB(x);
-      int numLabels = 3;
+      int numLabels = PAGING_TABLE_START_NUMBER_LABELS;
       if (temp.getNumPagesTextSegment() > 0) {
         numLabels += temp.getNumPagesTextSegment();
       }
       if (temp.getNumPagesDataSegment() > 0) {
         numLabels += temp.getNumPagesDataSegment();
       }
-      pcbPanels[index] = new JPanel(new GridLayout(PagingModel.NUMBER_FRAMES+3, 1));
+      pcbPanels[index] = new JPanel(new GridLayout(
+          PagingModel.NUMBER_FRAMES + PAGING_TABLE_START_NUMBER_LABELS, 1));
       pcbPanels[index]
           .setBorder(BorderFactory.createEtchedBorder(EtchedBorder.RAISED));
       pcbPanels[index]
@@ -223,23 +232,21 @@ public class PagingView extends JPanel {
       int currLabel = 0;
       pcbLabels[index][currLabel].setText(" Process " + x + " Page Table");
       currLabel++;
-      pcbLabels[index][currLabel].setText(
-          "   Text Segment");
+      pcbLabels[index][currLabel].setText("   Text Segment");
       currLabel++;
       if (temp.getNumPagesTextSegment() > 0) {
         for (int i = 0; i < temp.getNumPagesTextSegment(); i++) {
-          pcbLabels[index][currLabel].setText("       Page " + i + "  =>  Frame "
-              + temp.getPageTableMapping(PCB.TEXT_SEGMENT, i));
+          pcbLabels[index][currLabel].setText("       Page " + i
+              + "  =>  Frame " + temp.getPageTableMapping(PCB.TEXT_SEGMENT, i));
           currLabel++;
         }
       }
-      pcbLabels[index][currLabel].setText(
-          "   Data Segment");
+      pcbLabels[index][currLabel].setText("   Data Segment");
       currLabel++;
       if (temp.getNumPagesDataSegment() > 0) {
         for (int i = 0; i < temp.getNumPagesDataSegment(); i++) {
-          pcbLabels[index][currLabel].setText("       Page " + i + "  =>  Frame "
-              + temp.getPageTableMapping(PCB.DATA_SEGMENT, i));
+          pcbLabels[index][currLabel].setText("       Page " + i
+              + "  =>  Frame " + temp.getPageTableMapping(PCB.DATA_SEGMENT, i));
           currLabel++;
         }
       }
@@ -250,7 +257,7 @@ public class PagingView extends JPanel {
     pcbListPanel.repaint();
 
     // Create a boolean array to track free frames
-    boolean freeFrames[] = new boolean[PagingModel.NUMBER_FRAMES];
+    boolean[] freeFrames = new boolean[PagingModel.NUMBER_FRAMES];
     for (int i = 0; i < PagingModel.NUMBER_FRAMES; i++) {
       freeFrames[i] = true;
     }
@@ -290,7 +297,7 @@ public class PagingView extends JPanel {
         freeFrames[frame] = false;
       }
     }
-    
+
     // Set the contents of the free frames
     for (int i = 0; i < PagingModel.NUMBER_FRAMES; i++) {
       if (freeFrames[i]) {
@@ -305,7 +312,7 @@ public class PagingView extends JPanel {
   // Method processes the next event and sets the message displayed to the user.
   public void processNextEvent() {
     // Check if there are more events in the file
-    if (model.hasNextLine() == true) {
+    if (model.hasNextLine()) {
       String event = model.processNextLine();
       // Set the message displayed to the user
       String[] splitLine = event.split(" ");
@@ -324,5 +331,33 @@ public class PagingView extends JPanel {
       eventPanelLabel.setText("There are no more events to display.");
       nextEventButton.setEnabled(false);
     }
+  }
+
+  // Open a JOptionPane for the user to select a simulation
+  public void setAFile() {
+    if (choices == null) {
+      choices = new String[fileChoices.length];
+      for (int i = 0; i < fileChoices.length; i++) {
+        choices[i] = "Simulation " + i;
+      }
+    }
+
+    String simChoice =
+        (String) JOptionPane.showInputDialog(gui, "", "Choose a Simulation",
+            JOptionPane.QUESTION_MESSAGE, null, choices, choices[0]);
+    int choiceNum =
+        Integer.parseInt(Character.toString(simChoice.charAt(FILE_NUMBER)));
+    model = new PagingModel(fileChoices[choiceNum]);
+
+    if ("ERROR".equals(model.getLastProcessedEvent())) {
+      eventPanelLabel.setText("There was a problem opening the file.");
+      nextEventButton.setEnabled(false);
+    } else {
+      eventPanelLabel
+          .setText("Click the Next Event Button to start the simulation.");
+    }
+
+    nextEventButton.setEnabled(true);
+    display();
   }
 }
